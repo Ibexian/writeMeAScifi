@@ -1,0 +1,24 @@
+{
+  "name": "writeascifi",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "cd node_modules/keras-js &&  npm install "
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@tensorflow/tfjs": "^0.12.5",
+    "discrete-sampling": "^1.0.3",
+    "ibexian-keras-js": "^1.0.3",
+    "numjs": "^0.16.0"
+  },
+  "devDependencies": {
+    "babel-core": "^6.26.3",
+    "babel-polyfill": "^6.26.0",
+    "babel-preset-env": "^1.7.0"
+  }
+}

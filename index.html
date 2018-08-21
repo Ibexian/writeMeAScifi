@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.1/css/bulma.min.css">
+    <link href="https://fonts.googleapis.com/css?family=Space+Mono|Work+Sans" rel="stylesheet">
+    <script defer src="https://use.fontawesome.com/releases/v5.1.0/js/all.js"></script>
+    <style>
+        h1 {
+            font-family: 'Space Mono', monospace;
+        }
+        textarea {
+            font-family: 'Work Sans', sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <script src="./index.js"></script>
+    <section class="hero  is-dark is-bold is-fullheight">
+        <div class="hero-head">
+            <div class="container">
+            </div>
+        </div>
+        <div class="hero-body">
+            <div class="container is-centered">
+                <h1 class="title has-text-success is-1 has-text-centered">
+                    Computer, Write Me A Sci-Fi
+                </h1>
+                <section id='inputs' class="is-invisible">
+                    <div class="field has-addons">
+                        <div class="control">
+                            <input class="input" type="text" placeholder="Seed String">
+                        </div>
+                        <div class="control">
+                            <button class="button is-success">Submit</button>
+                        </div>
+                    </div>
+                </section>
+                <section id='progress'>
+                    <progress class="progress is-success is-large" value="14" max="100">60%</progress>
+                </section>
+            </div>
+        </div>
+        <div class="hero-foot">
+            <div class="container is-invisible">
+                <div class="control is-loading">
+                    <textarea class="textarea is-loading" type="text" readonly>Wicked Statisticalist Party, and the statement of the colonists were allowed to see the stars and the stars were allowed
+                    to see the stars</textarea>
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+
+</html>

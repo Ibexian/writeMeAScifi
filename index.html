@@ -29,10 +29,10 @@
                 <section id='inputs' class="is-invisible">
                     <div class="field has-addons">
                         <div class="control">
-                            <input class="input" type="text" placeholder="Seed String">
+                            <input class="input" id="seedText" type="text" placeholder="Seed String">
                         </div>
                         <div class="control">
-                            <button class="button is-success">Submit</button>
+                            <a id="submitButton" class="button is-success is-loading" disabled>Submit</a>
                         </div>
                     </div>
                 </section>
@@ -42,8 +42,8 @@
             </div>
         </div>
         <div class="hero-foot">
-            <div class="container is-invisible">
-                <div class="control is-loading">
+            <div class="container result-box is-invisible">
+                <div class="control">
                     <textarea class="textarea is-loading" type="text" readonly>Wicked Statisticalist Party, and the statement of the colonists were allowed to see the stars and the stars were allowed
                     to see the stars</textarea>
                 </div>

@@ -1,6 +1,11 @@
-
+### To Serve Locally
 `parcel index.html`
 
-Things needed for Web APP:
-- New Text Generator + Sampling Function
-- Service Workers for model cache
+
+### Tools:
+- Keras-js
+- Parcel
+- numjs
+- Bulma Css
+- Babel
+- discrete-sampling

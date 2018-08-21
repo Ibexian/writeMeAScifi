@@ -5,6 +5,7 @@ import nj from 'numjs';
 import sampling from 'discrete-sampling';
 import charJson from './char.json';
 import 'babel-polyfill';
+const modelBin = require('./final_model.bin');
 
 const charToId = charJson.charToId;
 const reverseDictionary = charJson.idToChar;
@@ -32,7 +33,7 @@ const sample = (arr, sampleRate=1) => {
 }
 
 const model = new KerasJS.Model({
-    filepath: 'final_model.bin',
+    filepath: modelBin,
     pauseAfterLayerCalls: true
 
 });

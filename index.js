@@ -61,9 +61,12 @@ const createInitArray = (length, max) => {
 
 const enableSubmit = () => {
     const submitButton = document.querySelector('#submitButton');
+    const textInput = document.querySelector('#seedText');
     //(un)bind submit event
     submitButton.removeEventListener('click', submitPrediction);
     submitButton.addEventListener('click', submitPrediction);
+    textInput.removeEventListener("keypress", submitOnEnter);
+    textInput.addEventListener("keypress", submitOnEnter);
     //Enable Button
     submitButton.classList.remove('is-loading');
     submitButton.removeAttribute('disabled');
@@ -71,36 +74,48 @@ const enableSubmit = () => {
 
 const diableSubmit = () => {
     const submitButton = document.querySelector('#submitButton');
-    //(un)bind submit event
-    submitButton.removeEventListener('click', submitPrediction);
-    submitButton.addEventListener('click', submitPrediction);
+    const textInput = document.querySelector('#seedText');
+    //unbind submit event
+    textInput.removeEventListener("keypress", submitOnEnter);
     //Disable Button
     submitButton.classList.add('is-loading');
     submitButton.setAttribute('disabled', true);
 };
 
 const displayResult = () => {
-    const resultContainer = document.querySelector('.result-box');
     const resultTextBox = document.querySelector('.result-box textarea');
-    resultContainer.classList.remove('is-invisible');
     //Print output to box
     resultTextBox.value = outputText;
     //clear text input
     document.querySelector('#seedText').value = '';
 }
 
+const submitOnEnter = (e) => {
+    if (e.which === 13) {
+        submitPrediction();
+    }
+};
+
+const addTextAndCursor = (newChar) => {
+    const resultBox = document.querySelector('.result-box textarea');
+    //Remove Cursor char
+    var results = resultBox.value.split('').slice(0, -1).join('');
+    //Add new char with cursor at end
+    resultBox.value = results += newChar += `\u2759`;
+};
+
 const submitPrediction = () => {
     diableSubmit();
     let [seed, seedArr] = captureSeedText();
-    outputText = seed;
+    outputText = seed += `\u2759`;
     predictText('', seedArr);
     displayResult();
 };
 const predictText = (predictionResult, seedArr) => {
-    const resultBox = document.querySelector('.result-box textarea');
     const inputData = {
         input: new Float32Array(seedArr)
     };
+    var t0 = performance.now();
     model.predict(inputData)
     .then(outputData => {
         var output = new Float32Array(outputData.output);
@@ -109,10 +124,12 @@ const predictText = (predictionResult, seedArr) => {
         var ix = sample(nextCharPrediction, 0.5);
         var predictedChar = reverseDictionary[ix.toString()];
         predictionResult += predictedChar;
-        resultBox.value = resultBox.value += predictedChar;
+        addTextAndCursor(predictedChar)
         if (predictionResult.length < targetSize) {
             seedArr.shift()
             seedArr.push(ix);
+            var t1 = performance.now();
+            console.log(t1 - t0);
             predictText(predictionResult, seedArr);
         } else {
             outputText += predictionResult;
@@ -134,9 +151,11 @@ const model = new KerasJS.Model({
 model.events.on('loadingProgress', updateProgress);
 
 model.ready().then(() => {
+    document.querySelector('.result-box textarea').value = '';
     enableSubmit();
     //TODO Style
     //TODO Animations
     //TODO Speed up Loop? - Each prediction isn't too bad - but doing 140 predictions is awful
+    //Try without the sampling or seedarray mods - maybe using timing
 });
 

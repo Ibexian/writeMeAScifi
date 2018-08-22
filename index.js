@@ -51,7 +51,8 @@ const sample = (arr, sampleRate=1) => {
     //Create an array of probabilities
     let probabilities = sampling.Multinomial(1, preds.tolist(), 1);
     //Return the one selected id based on probs
-    return probabilities.draw().reduce((iMax, x, i, arr) => x > arr[iMax] ? i : iMax, 0);
+    //return probabilities.draw().reduce((iMax, x, i, arr) => x > arr[iMax] ? i : iMax, 0);
+    return arr.reduce((iMax, x, i, arr) => x > arr[iMax] ? i : iMax, 0);
 };
 
 const createInitArray = (length, max) => {
@@ -115,7 +116,6 @@ const predictText = (predictionResult, seedArr) => {
     const inputData = {
         input: new Float32Array(seedArr)
     };
-    var t0 = performance.now();
     model.predict(inputData)
     .then(outputData => {
         var output = new Float32Array(outputData.output);
@@ -123,13 +123,12 @@ const predictText = (predictionResult, seedArr) => {
         var nextCharPrediction = unpack(predictions)[INPUTSIZE - 1];
         var ix = sample(nextCharPrediction, 0.5);
         var predictedChar = reverseDictionary[ix.toString()];
+        console.log("prediction", predictedChar, ix)
         predictionResult += predictedChar;
         addTextAndCursor(predictedChar)
         if (predictionResult.length < targetSize) {
             seedArr.shift()
             seedArr.push(ix);
-            var t1 = performance.now();
-            console.log(t1 - t0);
             predictText(predictionResult, seedArr);
         } else {
             outputText += predictionResult;

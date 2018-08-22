@@ -150,8 +150,6 @@ model.events.on('loadingProgress', updateProgress);
 model.ready().then(() => {
     document.querySelector('.result-box textarea').value = '';
     enableSubmit();
-    //TODO Style
-    //TODO Animations
-    //TODO Speed up Loop? - Each prediction isn't too bad - but doing 140 predictions is awful
+    //Predictions only work locally...
 });
 

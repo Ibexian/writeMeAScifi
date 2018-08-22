@@ -5,7 +5,6 @@ import nj from 'numjs';
 import sampling from 'discrete-sampling';
 import charJson from './char.json';
 import 'babel-polyfill';
-const modelBin = require('./final_model.bin');
 
 const charToId = charJson.charToId;
 const reverseDictionary = charJson.idToChar;
@@ -51,8 +50,7 @@ const sample = (arr, sampleRate=1) => {
     //Create an array of probabilities
     let probabilities = sampling.Multinomial(1, preds.tolist(), 1);
     //Return the one selected id based on probs
-    //return probabilities.draw().reduce((iMax, x, i, arr) => x > arr[iMax] ? i : iMax, 0);
-    return arr.reduce((iMax, x, i, arr) => x > arr[iMax] ? i : iMax, 0);
+    return probabilities.draw().reduce((iMax, x, i, arr) => x > arr[iMax] ? i : iMax, 0);
 };
 
 const createInitArray = (length, max) => {
@@ -143,7 +141,7 @@ const predictText = (predictionResult, seedArr) => {
 };
 
 const model = new KerasJS.Model({
-    filepath: modelBin,
+    filepath: 'https://william.kamovit.ch/data/final_model.bin',
     pauseAfterLayerCalls: true
 });
 
@@ -155,6 +153,5 @@ model.ready().then(() => {
     //TODO Style
     //TODO Animations
     //TODO Speed up Loop? - Each prediction isn't too bad - but doing 140 predictions is awful
-    //Try without the sampling or seedarray mods - maybe using timing
 });
 

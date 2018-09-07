@@ -4,13 +4,16 @@ import unpack from 'ndarray-unpack';
 import nj from 'numjs';
 import sampling from 'discrete-sampling';
 import charJson from './char.json';
+import rustWasm from './rust/cargo.toml';
 import 'babel-polyfill';
+
+const modelBin = require('./final_model.bin');
 
 const charToId = charJson.charToId;
 const reverseDictionary = charJson.idToChar;
 const TOTALCHARS = Object.keys(charToId).length;
 const INPUTSIZE = 50;
-var targetSize = 140;
+var targetSize = 15;
 var outputText = '';
 
 const updateProgress = (percent) => {
@@ -40,15 +43,10 @@ const captureSeedText = () => {
     return [seed, seedArr];
 };
 
-const sample = (arr, sampleRate=1) => {
-    var preds = nj.array(arr);
-    preds = nj.log(preds);
-    preds = nj.divide(preds, sampleRate);
-    let exp_preds = nj.exp(preds);
-    //normalize inputs
-    preds = nj.divide(exp_preds, nj.sum(exp_preds));
+const predict = async(arr, sampleRate=1) => {
+    let preds = await rustWasm.sample(sampleRate, arr).result;
     //Create an array of probabilities
-    let probabilities = sampling.Multinomial(1, preds.tolist(), 1);
+    let probabilities = sampling.Multinomial(1, preds, 1);
     //Return the one selected id based on probs
     return probabilities.draw().reduce((iMax, x, i, arr) => x > arr[iMax] ? i : iMax, 0);
 };
@@ -110,28 +108,32 @@ const submitPrediction = () => {
     predictText('', seedArr);
     displayResult();
 };
-const predictText = (predictionResult, seedArr) => {
+
+const predictionToChar = async(output, predictionResult, seedArr) => {
+    var output = new Float32Array(output.output);
+    var predictions = new ndarray(output, [INPUTSIZE, TOTALCHARS]);
+    var nextCharPrediction = unpack(predictions)[INPUTSIZE - 1];
+    var ix = await predict(nextCharPrediction, 0.5);
+    var predictedChar = reverseDictionary[ix.toString()];
+    console.log("prediction", predictedChar, ix)
+    predictionResult += predictedChar;
+    addTextAndCursor(predictedChar)
+    if (predictionResult.length < targetSize) {
+        seedArr.shift()
+        seedArr.push(ix);
+        predictText(predictionResult, seedArr);
+    } else {
+        outputText += predictionResult;
+        enableSubmit();
+    }
+};
+const predictText = async (predictionResult, seedArr) => {
     const inputData = {
         input: new Float32Array(seedArr)
     };
     model.predict(inputData)
     .then(outputData => {
-        var output = new Float32Array(outputData.output);
-        var predictions = new ndarray(output, [INPUTSIZE, TOTALCHARS]);
-        var nextCharPrediction = unpack(predictions)[INPUTSIZE - 1];
-        var ix = sample(nextCharPrediction, 0.5);
-        var predictedChar = reverseDictionary[ix.toString()];
-        console.log("prediction", predictedChar, ix)
-        predictionResult += predictedChar;
-        addTextAndCursor(predictedChar)
-        if (predictionResult.length < targetSize) {
-            seedArr.shift()
-            seedArr.push(ix);
-            predictText(predictionResult, seedArr);
-        } else {
-            outputText += predictionResult;
-            enableSubmit();
-        }
+        predictionToChar(outputData, predictionResult, seedArr);
     })
     .catch(err => {
         console.error(err);
@@ -141,7 +143,7 @@ const predictText = (predictionResult, seedArr) => {
 };
 
 const model = new KerasJS.Model({
-    filepath: 'https://william.kamovit.ch/data/final_model.bin',
+    filepath: modelBin,
     pauseAfterLayerCalls: true
 });
 

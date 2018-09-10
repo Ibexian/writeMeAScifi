@@ -4,7 +4,7 @@
 /build
 /dist
 /.cache
-/rust/target/*
+rust/target/*
 
 # dependencies
 /node_modules

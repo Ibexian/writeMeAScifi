@@ -2,7 +2,6 @@ import KerasJS from 'ibexian-keras-js';
 import ndarray from 'ndarray';
 import unpack from 'ndarray-unpack';
 import nj from 'numjs';
-import sampling from 'discrete-sampling';
 import charJson from './char.json';
 import rustWasm from './rust/cargo.toml';
 import 'babel-polyfill';
@@ -13,7 +12,7 @@ const charToId = charJson.charToId;
 const reverseDictionary = charJson.idToChar;
 const TOTALCHARS = Object.keys(charToId).length;
 const INPUTSIZE = 50;
-var targetSize = 15;
+var targetSize = 140;
 var outputText = '';
 
 const updateProgress = (percent) => {
@@ -41,14 +40,6 @@ const captureSeedText = () => {
         seedArr = [...randArr, ...seedArr];
     }
     return [seed, seedArr];
-};
-
-const predict = async(arr, sampleRate=1) => {
-    let preds = await rustWasm.sample(sampleRate, arr).result;
-    //Create an array of probabilities
-    let probabilities = sampling.Multinomial(1, preds, 1);
-    //Return the one selected id based on probs
-    return probabilities.draw().reduce((iMax, x, i, arr) => x > arr[iMax] ? i : iMax, 0);
 };
 
 const createInitArray = (length, max) => {
@@ -113,9 +104,9 @@ const predictionToChar = async(output, predictionResult, seedArr) => {
     var output = new Float32Array(output.output);
     var predictions = new ndarray(output, [INPUTSIZE, TOTALCHARS]);
     var nextCharPrediction = unpack(predictions)[INPUTSIZE - 1];
-    var ix = await predict(nextCharPrediction, 0.5);
+    var ix = await await rustWasm.sample(0.5, nextCharPrediction).result;
     var predictedChar = reverseDictionary[ix.toString()];
-    console.log("prediction", predictedChar, ix)
+    // console.log("prediction", predictedChar, ix)
     predictionResult += predictedChar;
     addTextAndCursor(predictedChar)
     if (predictionResult.length < targetSize) {
@@ -152,6 +143,5 @@ model.events.on('loadingProgress', updateProgress);
 model.ready().then(() => {
     document.querySelector('.result-box textarea').value = '';
     enableSubmit();
-    //Predictions only work locally...
 });
 

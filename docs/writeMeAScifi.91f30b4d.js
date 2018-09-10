@@ -65980,240 +65980,7 @@ module.exports = {
   images: require('./images')
 };
 
-},{"ndarray":"node_modules/ndarray/ndarray.js","cwise":"node_modules/cwise/lib/cwise-esprima.js","ndarray-ops":"node_modules/ndarray-ops/ndarray-ops.js","ndarray-fft":"node_modules/ndarray-fft/fft.js","./config":"node_modules/numjs/src/config.js","./dtypes":"node_modules/numjs/src/dtypes.js","./ndarray":"node_modules/numjs/src/ndarray.js","./utils":"node_modules/numjs/src/utils.js","./errors":"node_modules/numjs/src/errors.js","./images":"node_modules/numjs/src/images/index.js"}],"node_modules/discrete-sampling/discrete.js":[function(require,module,exports) {
-// discrete.js
-// Sample from discrete distributions.
-
-// Utility functions
-function _sum(a, b) {
-  return a + b;
-};
-function _fillArrayWithNumber(size, num) {
-  // thanks be to stackOverflow... this is a beautiful one-liner
-  return Array.apply(null, Array(size)).map(Number.prototype.valueOf, num);
-};
-function _rangeFunc(upper) {
-  var i = 0, out = [];
-  while (i < upper) out.push(i++);
-  return out;
-};
-// Prototype function
-function _samplerFunction(size) {
-    if (!Number.isInteger(size) || size < 0) {
-	throw new Error ("Number of samples must be a non-negative integer.");
-    }
-    if (!this.draw) {
-        throw new Error ("Distribution must specify a draw function.");
-    }
-    var result = [];
-    while (size--) {
-        result.push(this.draw());
-    }
-    return result;
-};
-// Prototype for discrete distributions
-var _samplerPrototype = {
-  sample: _samplerFunction
-};
-
-/**
- * Constructor for Bernoulli distribution
- */
-exports.Bernoulli = function(p) {
-
-  var result = Object.create(_samplerPrototype);
-
-  result.draw = function() {
-    return (Math.random() < p) ? 1 : 0;
-  };
-
-  result.toString = function() {
-    return "Bernoulli( " + p + " )";
-  };
-
-  return result;
-}
-
-/**
- * Constructor for Binomial distribution
- */
-exports.Binomial = function(n, p) {
-  
-  var result = Object.create(_samplerPrototype),
-  bern = exports.Bernoulli(p);
-
-  result.draw = function() {
-    return bern.sample(n).reduce(_sum, 0); // less space efficient than adding a bunch of draws, but cleaner :)
-  }
-
-  result.toString = function() { 
-    return "Binom( " + 
-      [n, p].join(", ") + 
-      " )"; 
-  }
-
-  return result;
-}
-
-/**
- * Constructor for Discrete distribution
- */
-exports.Discrete = function(probs) { // probs should be an array of probabilities. (they get normalized automagically) //
-  
-  var result = Object.create(_samplerPrototype),
-  k = probs.length;
-
-  result.draw = function() {
-    var i, p;
-    for (i = 0; i < k; i++) {
-      p = probs[i] / probs.slice(i).reduce(_sum, 0); // this is the (normalized) head of a slice of probs
-      if (exports.Bernoulli(p).draw()) return i;             // using the truthiness of a Bernoulli draw
-    }
-    return k - 1;
-  };
-
-  result.sampleNoReplace = function(size) {
-    if (size>probs.length) {
-      throw new Error("Sampling without replacement, and the sample size exceeds vector size.")
-    }
-    var disc, index, sum, samp = [];
-    var currentProbs = probs;
-    var live = _rangeFunc(probs.length);
-    while (size--) {
-      sum = currentProbs.reduce(_sum, 0);
-      currentProbs = currentProbs.map(function(x) {return x/sum; });
-      disc = exports.Discrete(currentProbs);
-      index = disc.draw();
-      samp.push(live[index]);
-      live.splice(index, 1);
-      currentProbs.splice(index, 1);
-      sum = currentProbs.reduce(_sum, 0);
-      currentProbs = currentProbs.map(function(x) {return x/sum; });
-    }
-    currentProbs = probs;
-    live = _rangeFunc(probs.length);
-    return samp;
-  }
-
-  result.toString = function() {
-    return "Dicrete( [" + 
-      probs.join(", ") + 
-      "] )";
-  };
-
-  return result;
-}
-
-/**
- * Constructor for Multinomial distribution
- */
-exports.Multinomial = function(n, probs) {
-
-  var result = Object.create(_samplerPrototype),
-  k = probs.length,
-  disc = exports.Discrete(probs);
-
-  result.draw = function() {
-    var draw_result = _fillArrayWithNumber(k, 0),
-    i = n;
-    while (i--) {
-      draw_result[disc.draw()] += 1;
-    }
-    return draw_result;
-  };
-
-  result.toString = function() {
-    return "Multinom( " + 
-      n + 
-      ", [" + probs.join(", ") + 
-      "] )";
-  };
-
-  return result;
-}
-
-/**
- * Constructor for Negative Binomial distribution
- */
-exports.NegBinomial = function(r, p) {
-  var result = Object.create(_samplerPrototype);
-
-  result.draw = function() {
-    var draw_result = 0, failures = r;
-    while (failures) {
-      exports.Bernoulli(p).draw() ? draw_result++ : failures--;
-    }
-    return draw_result;
-  };
-
-  result.toString = function() {
-    return "NegBinomial( " +  r +
-      ", " + p + " )";
-  };
-
-  return result;
-}
-
-/**
- * Constructor for Poisson distribution
- */
-exports.Poisson = function(lambda) {
-  var result = Object.create(_samplerPrototype);
-
-  result.draw = function() {
-    var draw_result, L = Math.exp(- lambda), k = 0, p = 1;
-
-    do {
-      k++;
-      p = p * Math.random()
-    } while (p > L);
-    return k-1;
-  }
-
-  result.toString = function() {
-    return "Poisson( " + lambda + " )";
-  }
-
-  return result;
-}
-
-/**
- * Sample from an array.
- */
-exports.sample_from_array = function(array, numSamples, withReplacement) {
-    var n = numSamples || 1,
-    result = [],
-    copy,
-    disc,
-    index;
-
-    if (!withReplacement && numSamples > array.length) {
-	throw new Error("Sampling without replacement, and the sample size exceeds vector size.")
-    }
-
-    if (withReplacement) {
-	while(numSamples--) {
-	    disc = exports.Discrete(_fillArrayWithNumber(array.length, 1));
-	    result.push(array[disc.draw()]);
-	}
-    } else {
-	// instead of splicing, consider sampling from an array of possible indices? meh?
-	copy = array.slice(0);
-	while (numSamples--) {
-	    disc = exports.Discrete(_fillArrayWithNumber(copy.length, 1));
-	    index = disc.draw();
-	    result.push(copy[index]);
-	    copy.splice(index, 1);
-	}	
-    }
-    return result;
-}
-
-// Give a global variable for this library
-if (typeof window !== 'undefined')
-  window.SJS = window.Sampling = exports;
-
-},{}],"char.json":[function(require,module,exports) {
+},{"ndarray":"node_modules/ndarray/ndarray.js","cwise":"node_modules/cwise/lib/cwise-esprima.js","ndarray-ops":"node_modules/ndarray-ops/ndarray-ops.js","ndarray-fft":"node_modules/ndarray-fft/fft.js","./config":"node_modules/numjs/src/config.js","./dtypes":"node_modules/numjs/src/dtypes.js","./ndarray":"node_modules/numjs/src/ndarray.js","./utils":"node_modules/numjs/src/utils.js","./errors":"node_modules/numjs/src/errors.js","./images":"node_modules/numjs/src/images/index.js"}],"char.json":[function(require,module,exports) {
 module.exports = {
     "idToChar": {
         "0": " ",
@@ -66415,9 +66182,9 @@ module.exports = "/final_model.2fda2b50.bin";
 },{}],"index.js":[function(require,module,exports) {
 'use strict';
 
-var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
-
 var _this = undefined;
+
+var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
 
 require('core-js/modules/es6.typed.array-buffer');
 
@@ -66627,10 +66394,6 @@ var _numjs = require('numjs');
 
 var _numjs2 = _interopRequireDefault(_numjs);
 
-var _discreteSampling = require('discrete-sampling');
-
-var _discreteSampling2 = _interopRequireDefault(_discreteSampling);
-
 var _char = require('./char.json');
 
 var _char2 = _interopRequireDefault(_char);
@@ -66651,7 +66414,7 @@ var charToId = _char2.default.charToId;
 var reverseDictionary = _char2.default.idToChar;
 var TOTALCHARS = Object.keys(charToId).length;
 var INPUTSIZE = 50;
-var targetSize = 15;
+var targetSize = 140;
 var outputText = '';
 
 var updateProgress = function updateProgress(percent) {
@@ -66682,41 +66445,6 @@ var captureSeedText = function captureSeedText() {
     }
     return [seed, seedArr];
 };
-
-var predict = function () {
-    var _ref = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(arr) {
-        var sampleRate = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
-        var preds, probabilities;
-        return regeneratorRuntime.wrap(function _callee$(_context) {
-            while (1) {
-                switch (_context.prev = _context.next) {
-                    case 0:
-                        _context.next = 2;
-                        return _cargo2.default.sample(sampleRate, arr).result;
-
-                    case 2:
-                        preds = _context.sent;
-
-                        //Create an array of probabilities
-                        probabilities = _discreteSampling2.default.Multinomial(1, preds, 1);
-                        //Return the one selected id based on probs
-
-                        return _context.abrupt('return', probabilities.draw().reduce(function (iMax, x, i, arr) {
-                            return x > arr[iMax] ? i : iMax;
-                        }, 0));
-
-                    case 5:
-                    case 'end':
-                        return _context.stop();
-                }
-            }
-        }, _callee, _this);
-    }));
-
-    return function predict(_x2) {
-        return _ref.apply(this, arguments);
-    };
-}();
 
 var createInitArray = function createInitArray(length, max) {
     //Create an array of random ints of 'length' size between 0 and 'max'
@@ -66782,23 +66510,27 @@ var submitPrediction = function submitPrediction() {
 };
 
 var predictionToChar = function () {
-    var _ref2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2(output, predictionResult, seedArr) {
+    var _ref = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(output, predictionResult, seedArr) {
         var predictions, nextCharPrediction, ix, predictedChar;
-        return regeneratorRuntime.wrap(function _callee2$(_context2) {
+        return regeneratorRuntime.wrap(function _callee$(_context) {
             while (1) {
-                switch (_context2.prev = _context2.next) {
+                switch (_context.prev = _context.next) {
                     case 0:
                         output = new Float32Array(output.output);
                         predictions = new _ndarray2.default(output, [INPUTSIZE, TOTALCHARS]);
                         nextCharPrediction = (0, _ndarrayUnpack2.default)(predictions)[INPUTSIZE - 1];
-                        _context2.next = 5;
-                        return predict(nextCharPrediction, 0.5);
+                        _context.next = 5;
+                        return _cargo2.default.sample(0.5, nextCharPrediction).result;
 
                     case 5:
-                        ix = _context2.sent;
-                        predictedChar = reverseDictionary[ix.toString()];
+                        _context.next = 7;
+                        return _context.sent;
 
-                        console.log("prediction", predictedChar, ix);
+                    case 7:
+                        ix = _context.sent;
+                        predictedChar = reverseDictionary[ix.toString()];
+                        // console.log("prediction", predictedChar, ix)
+
                         predictionResult += predictedChar;
                         addTextAndCursor(predictedChar);
                         if (predictionResult.length < targetSize) {
@@ -66810,24 +66542,24 @@ var predictionToChar = function () {
                             enableSubmit();
                         }
 
-                    case 11:
+                    case 12:
                     case 'end':
-                        return _context2.stop();
+                        return _context.stop();
                 }
             }
-        }, _callee2, _this);
+        }, _callee, _this);
     }));
 
-    return function predictionToChar(_x3, _x4, _x5) {
-        return _ref2.apply(this, arguments);
+    return function predictionToChar(_x, _x2, _x3) {
+        return _ref.apply(this, arguments);
     };
 }();
 var predictText = function () {
-    var _ref3 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee3(predictionResult, seedArr) {
+    var _ref2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2(predictionResult, seedArr) {
         var inputData;
-        return regeneratorRuntime.wrap(function _callee3$(_context3) {
+        return regeneratorRuntime.wrap(function _callee2$(_context2) {
             while (1) {
-                switch (_context3.prev = _context3.next) {
+                switch (_context2.prev = _context2.next) {
                     case 0:
                         inputData = {
                             input: new Float32Array(seedArr)
@@ -66843,14 +66575,14 @@ var predictText = function () {
 
                     case 2:
                     case 'end':
-                        return _context3.stop();
+                        return _context2.stop();
                 }
             }
-        }, _callee3, _this);
+        }, _callee2, _this);
     }));
 
-    return function predictText(_x6, _x7) {
-        return _ref3.apply(this, arguments);
+    return function predictText(_x4, _x5) {
+        return _ref2.apply(this, arguments);
     };
 }();
 
@@ -66864,9 +66596,8 @@ model.events.on('loadingProgress', updateProgress);
 model.ready().then(function () {
     document.querySelector('.result-box textarea').value = '';
     enableSubmit();
-    //Predictions only work locally...
 });
-},{"core-js/modules/es6.typed.array-buffer":"node_modules/core-js/modules/es6.typed.array-buffer.js","core-js/modules/es6.typed.int8-array":"node_modules/core-js/modules/es6.typed.int8-array.js","core-js/modules/es6.typed.uint8-array":"node_modules/core-js/modules/es6.typed.uint8-array.js","core-js/modules/es6.typed.uint8-clamped-array":"node_modules/core-js/modules/es6.typed.uint8-clamped-array.js","core-js/modules/es6.typed.int16-array":"node_modules/core-js/modules/es6.typed.int16-array.js","core-js/modules/es6.typed.uint16-array":"node_modules/core-js/modules/es6.typed.uint16-array.js","core-js/modules/es6.typed.int32-array":"node_modules/core-js/modules/es6.typed.int32-array.js","core-js/modules/es6.typed.uint32-array":"node_modules/core-js/modules/es6.typed.uint32-array.js","core-js/modules/es6.typed.float32-array":"node_modules/core-js/modules/es6.typed.float32-array.js","core-js/modules/es6.typed.float64-array":"node_modules/core-js/modules/es6.typed.float64-array.js","core-js/modules/es6.map":"node_modules/core-js/modules/es6.map.js","core-js/modules/es6.set":"node_modules/core-js/modules/es6.set.js","core-js/modules/es6.weak-map":"node_modules/core-js/modules/es6.weak-map.js","core-js/modules/es6.weak-set":"node_modules/core-js/modules/es6.weak-set.js","core-js/modules/es6.reflect.apply":"node_modules/core-js/modules/es6.reflect.apply.js","core-js/modules/es6.reflect.construct":"node_modules/core-js/modules/es6.reflect.construct.js","core-js/modules/es6.reflect.define-property":"node_modules/core-js/modules/es6.reflect.define-property.js","core-js/modules/es6.reflect.delete-property":"node_modules/core-js/modules/es6.reflect.delete-property.js","core-js/modules/es6.reflect.get":"node_modules/core-js/modules/es6.reflect.get.js","core-js/modules/es6.reflect.get-own-property-descriptor":"node_modules/core-js/modules/es6.reflect.get-own-property-descriptor.js","core-js/modules/es6.reflect.get-prototype-of":"node_modules/core-js/modules/es6.reflect.get-prototype-of.js","core-js/modules/es6.reflect.has":"node_modules/core-js/modules/es6.reflect.has.js","core-js/modules/es6.reflect.is-extensible":"node_modules/core-js/modules/es6.reflect.is-extensible.js","core-js/modules/es6.reflect.own-keys":"node_modules/core-js/modules/es6.reflect.own-keys.js","core-js/modules/es6.reflect.prevent-extensions":"node_modules/core-js/modules/es6.reflect.prevent-extensions.js","core-js/modules/es6.reflect.set":"node_modules/core-js/modules/es6.reflect.set.js","core-js/modules/es6.reflect.set-prototype-of":"node_modules/core-js/modules/es6.reflect.set-prototype-of.js","core-js/modules/es6.promise":"node_modules/core-js/modules/es6.promise.js","core-js/modules/es6.symbol":"node_modules/core-js/modules/es6.symbol.js","core-js/modules/es6.object.freeze":"node_modules/core-js/modules/es6.object.freeze.js","core-js/modules/es6.object.seal":"node_modules/core-js/modules/es6.object.seal.js","core-js/modules/es6.object.prevent-extensions":"node_modules/core-js/modules/es6.object.prevent-extensions.js","core-js/modules/es6.object.is-frozen":"node_modules/core-js/modules/es6.object.is-frozen.js","core-js/modules/es6.object.is-sealed":"node_modules/core-js/modules/es6.object.is-sealed.js","core-js/modules/es6.object.is-extensible":"node_modules/core-js/modules/es6.object.is-extensible.js","core-js/modules/es6.object.get-own-property-descriptor":"node_modules/core-js/modules/es6.object.get-own-property-descriptor.js","core-js/modules/es6.object.get-prototype-of":"node_modules/core-js/modules/es6.object.get-prototype-of.js","core-js/modules/es6.object.keys":"node_modules/core-js/modules/es6.object.keys.js","core-js/modules/es6.object.get-own-property-names":"node_modules/core-js/modules/es6.object.get-own-property-names.js","core-js/modules/es6.object.assign":"node_modules/core-js/modules/es6.object.assign.js","core-js/modules/es6.object.is":"node_modules/core-js/modules/es6.object.is.js","core-js/modules/es6.object.set-prototype-of":"node_modules/core-js/modules/es6.object.set-prototype-of.js","core-js/modules/es6.function.name":"node_modules/core-js/modules/es6.function.name.js","core-js/modules/es6.string.raw":"node_modules/core-js/modules/es6.string.raw.js","core-js/modules/es6.string.from-code-point":"node_modules/core-js/modules/es6.string.from-code-point.js","core-js/modules/es6.string.code-point-at":"node_modules/core-js/modules/es6.string.code-point-at.js","core-js/modules/es6.string.repeat":"node_modules/core-js/modules/es6.string.repeat.js","core-js/modules/es6.string.starts-with":"node_modules/core-js/modules/es6.string.starts-with.js","core-js/modules/es6.string.ends-with":"node_modules/core-js/modules/es6.string.ends-with.js","core-js/modules/es6.string.includes":"node_modules/core-js/modules/es6.string.includes.js","core-js/modules/es6.regexp.flags":"node_modules/core-js/modules/es6.regexp.flags.js","core-js/modules/es6.regexp.match":"node_modules/core-js/modules/es6.regexp.match.js","core-js/modules/es6.regexp.replace":"node_modules/core-js/modules/es6.regexp.replace.js","core-js/modules/es6.regexp.split":"node_modules/core-js/modules/es6.regexp.split.js","core-js/modules/es6.regexp.search":"node_modules/core-js/modules/es6.regexp.search.js","core-js/modules/es6.array.from":"node_modules/core-js/modules/es6.array.from.js","core-js/modules/es6.array.of":"node_modules/core-js/modules/es6.array.of.js","core-js/modules/es6.array.copy-within":"node_modules/core-js/modules/es6.array.copy-within.js","core-js/modules/es6.array.find":"node_modules/core-js/modules/es6.array.find.js","core-js/modules/es6.array.find-index":"node_modules/core-js/modules/es6.array.find-index.js","core-js/modules/es6.array.fill":"node_modules/core-js/modules/es6.array.fill.js","core-js/modules/es6.array.iterator":"node_modules/core-js/modules/es6.array.iterator.js","core-js/modules/es6.number.is-finite":"node_modules/core-js/modules/es6.number.is-finite.js","core-js/modules/es6.number.is-integer":"node_modules/core-js/modules/es6.number.is-integer.js","core-js/modules/es6.number.is-safe-integer":"node_modules/core-js/modules/es6.number.is-safe-integer.js","core-js/modules/es6.number.is-nan":"node_modules/core-js/modules/es6.number.is-nan.js","core-js/modules/es6.number.epsilon":"node_modules/core-js/modules/es6.number.epsilon.js","core-js/modules/es6.number.min-safe-integer":"node_modules/core-js/modules/es6.number.min-safe-integer.js","core-js/modules/es6.number.max-safe-integer":"node_modules/core-js/modules/es6.number.max-safe-integer.js","core-js/modules/es6.math.acosh":"node_modules/core-js/modules/es6.math.acosh.js","core-js/modules/es6.math.asinh":"node_modules/core-js/modules/es6.math.asinh.js","core-js/modules/es6.math.atanh":"node_modules/core-js/modules/es6.math.atanh.js","core-js/modules/es6.math.cbrt":"node_modules/core-js/modules/es6.math.cbrt.js","core-js/modules/es6.math.clz32":"node_modules/core-js/modules/es6.math.clz32.js","core-js/modules/es6.math.cosh":"node_modules/core-js/modules/es6.math.cosh.js","core-js/modules/es6.math.expm1":"node_modules/core-js/modules/es6.math.expm1.js","core-js/modules/es6.math.fround":"node_modules/core-js/modules/es6.math.fround.js","core-js/modules/es6.math.hypot":"node_modules/core-js/modules/es6.math.hypot.js","core-js/modules/es6.math.imul":"node_modules/core-js/modules/es6.math.imul.js","core-js/modules/es6.math.log1p":"node_modules/core-js/modules/es6.math.log1p.js","core-js/modules/es6.math.log10":"node_modules/core-js/modules/es6.math.log10.js","core-js/modules/es6.math.log2":"node_modules/core-js/modules/es6.math.log2.js","core-js/modules/es6.math.sign":"node_modules/core-js/modules/es6.math.sign.js","core-js/modules/es6.math.sinh":"node_modules/core-js/modules/es6.math.sinh.js","core-js/modules/es6.math.tanh":"node_modules/core-js/modules/es6.math.tanh.js","core-js/modules/es6.math.trunc":"node_modules/core-js/modules/es6.math.trunc.js","core-js/modules/es7.array.includes":"node_modules/core-js/modules/es7.array.includes.js","core-js/modules/es7.object.values":"node_modules/core-js/modules/es7.object.values.js","core-js/modules/es7.object.entries":"node_modules/core-js/modules/es7.object.entries.js","core-js/modules/es7.object.get-own-property-descriptors":"node_modules/core-js/modules/es7.object.get-own-property-descriptors.js","core-js/modules/es7.string.pad-start":"node_modules/core-js/modules/es7.string.pad-start.js","core-js/modules/es7.string.pad-end":"node_modules/core-js/modules/es7.string.pad-end.js","core-js/modules/web.timers":"node_modules/core-js/modules/web.timers.js","core-js/modules/web.immediate":"node_modules/core-js/modules/web.immediate.js","core-js/modules/web.dom.iterable":"node_modules/core-js/modules/web.dom.iterable.js","regenerator-runtime/runtime":"node_modules/regenerator-runtime/runtime.js","ibexian-keras-js":"node_modules/ibexian-keras-js/lib/index.js","ndarray":"node_modules/ndarray/ndarray.js","ndarray-unpack":"node_modules/ndarray-unpack/unpack.js","numjs":"node_modules/numjs/src/index.js","discrete-sampling":"node_modules/discrete-sampling/discrete.js","./char.json":"char.json","./rust/cargo.toml":"rust/cargo.toml","./final_model.bin":"final_model.bin"}],".cache/.cargo-web/loader-fba2eb6a947e2d7f51e61d179ae0a3fc.js":[function(require,module,exports) {
+},{"core-js/modules/es6.typed.array-buffer":"node_modules/core-js/modules/es6.typed.array-buffer.js","core-js/modules/es6.typed.int8-array":"node_modules/core-js/modules/es6.typed.int8-array.js","core-js/modules/es6.typed.uint8-array":"node_modules/core-js/modules/es6.typed.uint8-array.js","core-js/modules/es6.typed.uint8-clamped-array":"node_modules/core-js/modules/es6.typed.uint8-clamped-array.js","core-js/modules/es6.typed.int16-array":"node_modules/core-js/modules/es6.typed.int16-array.js","core-js/modules/es6.typed.uint16-array":"node_modules/core-js/modules/es6.typed.uint16-array.js","core-js/modules/es6.typed.int32-array":"node_modules/core-js/modules/es6.typed.int32-array.js","core-js/modules/es6.typed.uint32-array":"node_modules/core-js/modules/es6.typed.uint32-array.js","core-js/modules/es6.typed.float32-array":"node_modules/core-js/modules/es6.typed.float32-array.js","core-js/modules/es6.typed.float64-array":"node_modules/core-js/modules/es6.typed.float64-array.js","core-js/modules/es6.map":"node_modules/core-js/modules/es6.map.js","core-js/modules/es6.set":"node_modules/core-js/modules/es6.set.js","core-js/modules/es6.weak-map":"node_modules/core-js/modules/es6.weak-map.js","core-js/modules/es6.weak-set":"node_modules/core-js/modules/es6.weak-set.js","core-js/modules/es6.reflect.apply":"node_modules/core-js/modules/es6.reflect.apply.js","core-js/modules/es6.reflect.construct":"node_modules/core-js/modules/es6.reflect.construct.js","core-js/modules/es6.reflect.define-property":"node_modules/core-js/modules/es6.reflect.define-property.js","core-js/modules/es6.reflect.delete-property":"node_modules/core-js/modules/es6.reflect.delete-property.js","core-js/modules/es6.reflect.get":"node_modules/core-js/modules/es6.reflect.get.js","core-js/modules/es6.reflect.get-own-property-descriptor":"node_modules/core-js/modules/es6.reflect.get-own-property-descriptor.js","core-js/modules/es6.reflect.get-prototype-of":"node_modules/core-js/modules/es6.reflect.get-prototype-of.js","core-js/modules/es6.reflect.has":"node_modules/core-js/modules/es6.reflect.has.js","core-js/modules/es6.reflect.is-extensible":"node_modules/core-js/modules/es6.reflect.is-extensible.js","core-js/modules/es6.reflect.own-keys":"node_modules/core-js/modules/es6.reflect.own-keys.js","core-js/modules/es6.reflect.prevent-extensions":"node_modules/core-js/modules/es6.reflect.prevent-extensions.js","core-js/modules/es6.reflect.set":"node_modules/core-js/modules/es6.reflect.set.js","core-js/modules/es6.reflect.set-prototype-of":"node_modules/core-js/modules/es6.reflect.set-prototype-of.js","core-js/modules/es6.promise":"node_modules/core-js/modules/es6.promise.js","core-js/modules/es6.symbol":"node_modules/core-js/modules/es6.symbol.js","core-js/modules/es6.object.freeze":"node_modules/core-js/modules/es6.object.freeze.js","core-js/modules/es6.object.seal":"node_modules/core-js/modules/es6.object.seal.js","core-js/modules/es6.object.prevent-extensions":"node_modules/core-js/modules/es6.object.prevent-extensions.js","core-js/modules/es6.object.is-frozen":"node_modules/core-js/modules/es6.object.is-frozen.js","core-js/modules/es6.object.is-sealed":"node_modules/core-js/modules/es6.object.is-sealed.js","core-js/modules/es6.object.is-extensible":"node_modules/core-js/modules/es6.object.is-extensible.js","core-js/modules/es6.object.get-own-property-descriptor":"node_modules/core-js/modules/es6.object.get-own-property-descriptor.js","core-js/modules/es6.object.get-prototype-of":"node_modules/core-js/modules/es6.object.get-prototype-of.js","core-js/modules/es6.object.keys":"node_modules/core-js/modules/es6.object.keys.js","core-js/modules/es6.object.get-own-property-names":"node_modules/core-js/modules/es6.object.get-own-property-names.js","core-js/modules/es6.object.assign":"node_modules/core-js/modules/es6.object.assign.js","core-js/modules/es6.object.is":"node_modules/core-js/modules/es6.object.is.js","core-js/modules/es6.object.set-prototype-of":"node_modules/core-js/modules/es6.object.set-prototype-of.js","core-js/modules/es6.function.name":"node_modules/core-js/modules/es6.function.name.js","core-js/modules/es6.string.raw":"node_modules/core-js/modules/es6.string.raw.js","core-js/modules/es6.string.from-code-point":"node_modules/core-js/modules/es6.string.from-code-point.js","core-js/modules/es6.string.code-point-at":"node_modules/core-js/modules/es6.string.code-point-at.js","core-js/modules/es6.string.repeat":"node_modules/core-js/modules/es6.string.repeat.js","core-js/modules/es6.string.starts-with":"node_modules/core-js/modules/es6.string.starts-with.js","core-js/modules/es6.string.ends-with":"node_modules/core-js/modules/es6.string.ends-with.js","core-js/modules/es6.string.includes":"node_modules/core-js/modules/es6.string.includes.js","core-js/modules/es6.regexp.flags":"node_modules/core-js/modules/es6.regexp.flags.js","core-js/modules/es6.regexp.match":"node_modules/core-js/modules/es6.regexp.match.js","core-js/modules/es6.regexp.replace":"node_modules/core-js/modules/es6.regexp.replace.js","core-js/modules/es6.regexp.split":"node_modules/core-js/modules/es6.regexp.split.js","core-js/modules/es6.regexp.search":"node_modules/core-js/modules/es6.regexp.search.js","core-js/modules/es6.array.from":"node_modules/core-js/modules/es6.array.from.js","core-js/modules/es6.array.of":"node_modules/core-js/modules/es6.array.of.js","core-js/modules/es6.array.copy-within":"node_modules/core-js/modules/es6.array.copy-within.js","core-js/modules/es6.array.find":"node_modules/core-js/modules/es6.array.find.js","core-js/modules/es6.array.find-index":"node_modules/core-js/modules/es6.array.find-index.js","core-js/modules/es6.array.fill":"node_modules/core-js/modules/es6.array.fill.js","core-js/modules/es6.array.iterator":"node_modules/core-js/modules/es6.array.iterator.js","core-js/modules/es6.number.is-finite":"node_modules/core-js/modules/es6.number.is-finite.js","core-js/modules/es6.number.is-integer":"node_modules/core-js/modules/es6.number.is-integer.js","core-js/modules/es6.number.is-safe-integer":"node_modules/core-js/modules/es6.number.is-safe-integer.js","core-js/modules/es6.number.is-nan":"node_modules/core-js/modules/es6.number.is-nan.js","core-js/modules/es6.number.epsilon":"node_modules/core-js/modules/es6.number.epsilon.js","core-js/modules/es6.number.min-safe-integer":"node_modules/core-js/modules/es6.number.min-safe-integer.js","core-js/modules/es6.number.max-safe-integer":"node_modules/core-js/modules/es6.number.max-safe-integer.js","core-js/modules/es6.math.acosh":"node_modules/core-js/modules/es6.math.acosh.js","core-js/modules/es6.math.asinh":"node_modules/core-js/modules/es6.math.asinh.js","core-js/modules/es6.math.atanh":"node_modules/core-js/modules/es6.math.atanh.js","core-js/modules/es6.math.cbrt":"node_modules/core-js/modules/es6.math.cbrt.js","core-js/modules/es6.math.clz32":"node_modules/core-js/modules/es6.math.clz32.js","core-js/modules/es6.math.cosh":"node_modules/core-js/modules/es6.math.cosh.js","core-js/modules/es6.math.expm1":"node_modules/core-js/modules/es6.math.expm1.js","core-js/modules/es6.math.fround":"node_modules/core-js/modules/es6.math.fround.js","core-js/modules/es6.math.hypot":"node_modules/core-js/modules/es6.math.hypot.js","core-js/modules/es6.math.imul":"node_modules/core-js/modules/es6.math.imul.js","core-js/modules/es6.math.log1p":"node_modules/core-js/modules/es6.math.log1p.js","core-js/modules/es6.math.log10":"node_modules/core-js/modules/es6.math.log10.js","core-js/modules/es6.math.log2":"node_modules/core-js/modules/es6.math.log2.js","core-js/modules/es6.math.sign":"node_modules/core-js/modules/es6.math.sign.js","core-js/modules/es6.math.sinh":"node_modules/core-js/modules/es6.math.sinh.js","core-js/modules/es6.math.tanh":"node_modules/core-js/modules/es6.math.tanh.js","core-js/modules/es6.math.trunc":"node_modules/core-js/modules/es6.math.trunc.js","core-js/modules/es7.array.includes":"node_modules/core-js/modules/es7.array.includes.js","core-js/modules/es7.object.values":"node_modules/core-js/modules/es7.object.values.js","core-js/modules/es7.object.entries":"node_modules/core-js/modules/es7.object.entries.js","core-js/modules/es7.object.get-own-property-descriptors":"node_modules/core-js/modules/es7.object.get-own-property-descriptors.js","core-js/modules/es7.string.pad-start":"node_modules/core-js/modules/es7.string.pad-start.js","core-js/modules/es7.string.pad-end":"node_modules/core-js/modules/es7.string.pad-end.js","core-js/modules/web.timers":"node_modules/core-js/modules/web.timers.js","core-js/modules/web.immediate":"node_modules/core-js/modules/web.immediate.js","core-js/modules/web.dom.iterable":"node_modules/core-js/modules/web.dom.iterable.js","regenerator-runtime/runtime":"node_modules/regenerator-runtime/runtime.js","ibexian-keras-js":"node_modules/ibexian-keras-js/lib/index.js","ndarray":"node_modules/ndarray/ndarray.js","ndarray-unpack":"node_modules/ndarray-unpack/unpack.js","numjs":"node_modules/numjs/src/index.js","./char.json":"char.json","./rust/cargo.toml":"rust/cargo.toml","./final_model.bin":"final_model.bin"}],".cache/.cargo-web/loader-fba2eb6a947e2d7f51e61d179ae0a3fc.js":[function(require,module,exports) {
 
 module.exports = function (bundle) {
     function __initialize(__wasm_module, __load_asynchronously) {
@@ -67335,11 +67066,6 @@ module.exports = function (bundle) {
                         "__extjs_80d6d56760c65e49b7be8b6b01c1ea861b046bf0": function __extjs_80d6d56760c65e49b7be8b6b01c1ea861b046bf0($0) {
                             Module.STDWEB_PRIVATE.decrement_refcount($0);
                         },
-                        "__extjs_ee41f864457c794c278cdcafc28967ffbac29706": function __extjs_ee41f864457c794c278cdcafc28967ffbac29706($0, $1) {
-                            $1 = Module.STDWEB_PRIVATE.to_js($1);Module.STDWEB_PRIVATE.from_js($0, function () {
-                                return $1;
-                            }());
-                        },
                         "__extjs_10f5aa3985855124ab83b21d4e9f7297eb496508": function __extjs_10f5aa3985855124ab83b21d4e9f7297eb496508($0) {
                             var o = Module.STDWEB_PRIVATE.acquire_js_reference($0);return o instanceof Array | 0;
                         },
@@ -67351,6 +67077,14 @@ module.exports = function (bundle) {
                         },
                         "__extjs_db0226ae1bbecd407e9880ee28ddc70fc3322d9c": function __extjs_db0226ae1bbecd407e9880ee28ddc70fc3322d9c($0) {
                             $0 = Module.STDWEB_PRIVATE.to_js($0);Module.STDWEB_PRIVATE.unregister_raw_value($0);
+                        },
+                        "__extjs_ee41f864457c794c278cdcafc28967ffbac29706": function __extjs_ee41f864457c794c278cdcafc28967ffbac29706($0, $1) {
+                            $1 = Module.STDWEB_PRIVATE.to_js($1);Module.STDWEB_PRIVATE.from_js($0, function () {
+                                return $1;
+                            }());
+                        },
+                        "Math_tan": function Math_tan($0) {
+                            return Math.tan($0);
                         },
                         "__web_on_grow": __web_on_grow
                     }
@@ -67409,7 +67143,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = '' || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + '63075' + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + '59881' + '/');
   ws.onmessage = function (event) {
     var data = JSON.parse(event.data);
 

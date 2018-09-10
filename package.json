@@ -12,8 +12,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "char_predictor": "^0.1.0",
-    "discrete-sampling": "^1.0.3",
     "ibexian-keras-js": "^1.0.3",
     "numjs": "^0.16.0",
     "parcel-plugin-cargo-web": "^0.3.0"

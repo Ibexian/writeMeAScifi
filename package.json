@@ -14,7 +14,8 @@
   "dependencies": {
     "ibexian-keras-js": "^1.0.3",
     "numjs": "^0.16.0",
-    "parcel-plugin-cargo-web": "^0.3.0"
+    "parcel-plugin-cargo-web": "^0.3.0",
+    "static-eval": "^2.0.0"
   },
   "devDependencies": {
     "babel-core": "^6.26.3",

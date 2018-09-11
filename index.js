@@ -6,8 +6,6 @@ import charJson from './char.json';
 import rustWasm from './rust/cargo.toml';
 import 'babel-polyfill';
 
-const modelBin = require('./final_model.bin');
-
 const charToId = charJson.charToId;
 const reverseDictionary = charJson.idToChar;
 const TOTALCHARS = Object.keys(charToId).length;
@@ -134,7 +132,7 @@ const predictText = async (predictionResult, seedArr) => {
 };
 
 const model = new KerasJS.Model({
-    filepath: modelBin,
+    filepath: "https://william.kamovit.ch/data/final_model.bin",
     pauseAfterLayerCalls: true
 });
 

@@ -1,0 +1,132 @@
+@-moz-keyframes flash {
+    0% {
+        opacity: 0;
+    }
+
+    49.9% {
+        opacity: 0;
+    }
+
+    50%,
+    100% {
+        opacity: 1;
+    }
+}
+
+@-webkit-keyframes flash {
+    0% {
+        opacity: 0;
+    }
+
+    49.9% {
+        opacity: 0;
+    }
+
+    50%,
+    100% {
+        opacity: 1;
+    }
+}
+
+@-o-keyframes flash {
+    0% {
+        opacity: 0;
+    }
+
+    49.9% {
+        opacity: 0;
+    }
+
+    50%,
+    100% {
+        opacity: 1;
+    }
+}
+
+@-ms-keyframes flash {
+    0% {
+        opacity: 0;
+    }
+
+    49.9% {
+        opacity: 0;
+    }
+
+    50%,
+    100% {
+        opacity: 1;
+    }
+}
+
+@keyframes flash {
+    0% {
+        opacity: 0;
+    }
+
+    49.9% {
+        opacity: 0;
+    }
+
+    50%,
+    100% {
+        opacity: 1;
+    }
+}
+#inputs {
+    width: 68vw;
+    max-width: 1000px;
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    margin: 0 auto;
+}
+.inputArea {
+    padding: 5vw 0 2vh 5vh;
+}
+
+.screen-container {
+    position: relative;
+    width: 68vw;
+    max-width: 1000px;
+    height: 53vh;
+    max-height: 780px;
+    background: #c2c2c2;
+    background: linear-gradient(top, #b3b3b3, #cccccc 4%, #cccccc 96%, #a6a6a6);
+    border-radius: 1vw;
+    padding: 5vw;
+    transform: translate3d(1.5em, 1.5em, 0);
+}
+
+.screen {
+    display: block;
+    position: absolute;
+    left: 0.5vw;
+    top: 0.5vw;
+    background: #657374;
+    border: 2.5vw solid #657374;
+    width: 67vw;
+    max-width: 986px;
+    height: 51vh;
+    max-height: 766px;
+    border-radius: 2.5vw;
+    overflow: scroll;
+}
+
+.screen p {
+    color: #00c317;
+    font-family: monospace, prestige;
+    font-size: 2em;
+}
+
+.screen p:before {
+    content: "> ";
+}
+
+.screen p:after {
+    content: " |";
+    -webkit-animation: flash 1.5s infinite linear;
+    -moz-animation: flash 1.5s infinite linear;
+    -o-animation: flash 1.5s infinite linear;
+    -ms-animation: flash 1.5s infinite linear;
+    animation: flash 1.5s infinite linear;
+}

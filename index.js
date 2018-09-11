@@ -71,9 +71,9 @@ const diableSubmit = () => {
 };
 
 const displayResult = () => {
-    const resultTextBox = document.querySelector('.result-box textarea');
+    const resultTextBox = document.querySelector('.result-box .screen p');
     //Print output to box
-    resultTextBox.value = outputText;
+    resultTextBox.innerHTML = outputText;
     //clear text input
     document.querySelector('#seedText').value = '';
 }
@@ -85,17 +85,17 @@ const submitOnEnter = (e) => {
 };
 
 const addTextAndCursor = (newChar) => {
-    const resultBox = document.querySelector('.result-box textarea');
+    const resultBox = document.querySelector('.result-box .screen p');
     //Remove Cursor char
-    var results = resultBox.value.split('').slice(0, -1).join('');
+    var results = resultBox.innerHTML;
     //Add new char with cursor at end
-    resultBox.value = results += newChar += `\u2759`;
+    resultBox.innerHTML = results += newChar;
 };
 
 const submitPrediction = () => {
     diableSubmit();
     let [seed, seedArr] = captureSeedText();
-    outputText = seed += `\u2759`;
+    outputText = seed;
     predictText('', seedArr);
     displayResult();
 };
@@ -141,7 +141,7 @@ const model = new KerasJS.Model({
 model.events.on('loadingProgress', updateProgress);
 
 model.ready().then(() => {
-    document.querySelector('.result-box textarea').value = '';
+    document.querySelector('.result-box .screen p').value = '';
     enableSubmit();
 });
 
